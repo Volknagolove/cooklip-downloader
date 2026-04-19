@@ -1,40 +1,46 @@
 # Cooklip Build
 
-The build script creates all four release variants:
+Сборка делается через `PyInstaller` из:
 
-- `Cooklip-lite`
-- `Cooklip-full`
-- `Cooklip-EN-lite`
-- `Cooklip-EN-full`
+- [cooklip_gui.py](Z:\metube\cooklip_gui.py)
+- [cooklip_gui_ru.py](Z:\metube\cooklip_gui_ru.py)
 
-## Requirements
+## Что установить
 
 ```powershell
 py -m pip install pyinstaller
 py -m pip install PySide6 PySide6-Fluent-Widgets websocket-client
 ```
 
-The build also expects these tools to be available locally or in `bin/`:
-
-- `yt-dlp.exe`
-- `ffmpeg.exe`
-- `ffprobe.exe`
-
-## Build Command
+## Как собрать
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_cooklip.ps1
 ```
 
-## What The Script Does
+Скрипт:
 
-- regenerates the Qt resource module from `cooklip.ico`
-- builds English and Russian executables with `PyInstaller`
-- creates `lite` and `full` release folders
-- puts `yt-dlp.exe` into `lite` and `full`
-- puts `ffmpeg.exe` and `ffprobe.exe` into `full`
-- creates zip archives for all release variants
+- пересобирает Qt resource-иконку из `cooklip.ico`
+- собирает `Cooklip.exe`
+- собирает `Cooklip_RU.exe`
+- создаёт папки:
+  - `release/Cooklip-lite`
+  - `release/Cooklip-full`
+  - `release/Cooklip-RU-lite`
+  - `release/Cooklip-RU-full`
+- кладёт в `lite`:
+  - `yt-dlp.exe`
+- кладёт в `full`:
+  - `yt-dlp.exe`
+  - `ffmpeg.exe`
+  - `ffprobe.exe`
+- создаёт zip-архивы всех четырёх релизов
 
-## Notes
+## Что получится
 
-User data is not included in releases. The app creates its own `data/` folder on first run.
+- `Cooklip-lite`
+- `Cooklip-full`
+- `Cooklip-RU-lite`
+- `Cooklip-RU-full`
+
+Все пользовательские данные создаются уже при запуске приложения в папке `data` рядом с `exe`, а не попадают в release заранее.

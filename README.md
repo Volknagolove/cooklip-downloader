@@ -10,7 +10,7 @@ Cooklip Downloader is a desktop GUI for `yt-dlp` with Microsoft Edge cookie supp
 - choose format and quality
 - keep a history of downloaded files
 - portable `data/` folder next to the app
-- English and Russian GUI versions
+- English default GUI and separate Russian GUI versions
 - built with Python, PySide6, QFluentWidgets, `yt-dlp`, and `ffmpeg`
 
 ## Interface
@@ -55,3 +55,4 @@ This keeps the app portable and makes cookies easy to find and replace.
 ## Build
 
 See `BUILD_COOKLIP.md` for build instructions.
+

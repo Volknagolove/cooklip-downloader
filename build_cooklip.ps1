@@ -294,14 +294,14 @@ $script:ffprobePath = Find-CommandPath -Names @("ffprobe", "ffprobe.exe") -Candi
     "$env:UserProfile\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe"
 )
 
-$RuLiteDir = Join-Path $ReleaseRoot "Cooklip-lite"
-$RuFullDir = Join-Path $ReleaseRoot "Cooklip-full"
-$EnLiteDir = Join-Path $ReleaseRoot "Cooklip-EN-lite"
-$EnFullDir = Join-Path $ReleaseRoot "Cooklip-EN-full"
+$RuLiteDir = Join-Path $ReleaseRoot "Cooklip-RU-lite"
+$RuFullDir = Join-Path $ReleaseRoot "Cooklip-RU-full"
+$EnLiteDir = Join-Path $ReleaseRoot "Cooklip-lite"
+$EnFullDir = Join-Path $ReleaseRoot "Cooklip-full"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuLiteDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader - Lite" -ReadmeHeaderLines @(
+Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuLiteDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader RU - Lite" -ReadmeHeaderLines @(
     "Quick start:",
-    "1. Run Cooklip Lite.exe",
+    "1. Run Cooklip RU Lite.exe",
     "2. If needed, click 'Запустить Edge для куков'",
     "3. Авторизуйтесь и нажмите 'Обновить куки из Edge'",
     "4. Вставьте ссылку и нажмите 'Скачать'"
@@ -310,9 +310,9 @@ Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuLiteDir -SettingsF
     "- ffmpeg is not included in lite. Use the full release if conversion or merging is needed."
 ) -SourceExeName "Cooklip_RU.exe" -ReleaseExeName "Cooklip RU Lite.exe"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuFullDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader - Full" -ReadmeHeaderLines @(
+Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuFullDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader RU - Full" -ReadmeHeaderLines @(
     "Quick start:",
-    "1. Run Cooklip Full.exe",
+    "1. Run Cooklip RU Full.exe",
     "2. If needed, click 'Запустить Edge для куков'",
     "3. Авторизуйтесь и нажмите 'Обновить куки из Edge'",
     "4. Вставьте ссылку и нажмите 'Скачать'"
@@ -321,9 +321,9 @@ Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuFullDir -SettingsF
     "- ffmpeg.exe and ffprobe.exe are included."
 ) -SourceExeName "Cooklip_RU.exe" -ReleaseExeName "Cooklip RU Full.exe"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnLiteDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader EN - Lite" -ReadmeHeaderLines @(
+Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnLiteDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader - Lite" -ReadmeHeaderLines @(
     "Quick start:",
-    "1. Run Cooklip EN Lite.exe",
+    "1. Run Cooklip Lite.exe",
     "2. If needed, click 'Launch Edge for cookies'",
     "3. Sign in and click 'Refresh cookies from Edge'",
     "4. Paste a link and download"
@@ -332,9 +332,9 @@ Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnLiteDir -SettingsF
     "- ffmpeg is not included in lite. Use the full release if conversion or merging is needed."
 ) -SourceExeName "Cooklip.exe" -ReleaseExeName "Cooklip Lite.exe"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnFullDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader EN - Full" -ReadmeHeaderLines @(
+Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnFullDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader - Full" -ReadmeHeaderLines @(
     "Quick start:",
-    "1. Run Cooklip EN Full.exe",
+    "1. Run Cooklip Full.exe",
     "2. If needed, click 'Launch Edge for cookies'",
     "3. Sign in and click 'Refresh cookies from Edge'",
     "4. Paste a link and download"
@@ -344,18 +344,18 @@ Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnFullDir -SettingsF
 ) -SourceExeName "Cooklip.exe" -ReleaseExeName "Cooklip Full.exe"
 
 if (-not $NoZip) {
-    Zip-Variant -SourceDir $RuLiteDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-lite-win64.zip")
-    Zip-Variant -SourceDir $RuFullDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-full-win64.zip")
-    Zip-Variant -SourceDir $EnLiteDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-EN-lite-win64.zip")
-    Zip-Variant -SourceDir $EnFullDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-EN-full-win64.zip")
+    Zip-Variant -SourceDir $EnLiteDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-lite-win64.zip")
+    Zip-Variant -SourceDir $EnFullDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-full-win64.zip")
+    Zip-Variant -SourceDir $RuLiteDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-RU-lite-win64.zip")
+    Zip-Variant -SourceDir $RuFullDir -ZipPath (Join-Path $ReleaseRoot "Cooklip-RU-full-win64.zip")
 }
 
 Write-Host ""
 Write-Host "Done."
-Write-Host "RU Lite: $RuLiteDir"
-Write-Host "RU Full: $RuFullDir"
 Write-Host "EN Lite: $EnLiteDir"
 Write-Host "EN Full: $EnFullDir"
+Write-Host "RU Lite: $RuLiteDir"
+Write-Host "RU Full: $RuFullDir"
 if (-not $NoZip) {
     Write-Host "ZIP archives: $ReleaseRoot"
 }
