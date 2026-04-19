@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+release/
+release_v2/
+Cooklip-test-release/
+data/
+.build_*/
+.dist_*/
+.spec_*/
+*.zip
+*.log

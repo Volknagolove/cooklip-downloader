@@ -1,0 +1,7 @@
+Put your main GitHub screenshot here as:
+
+docs/screenshot-main.png
+
+Then add this to README.md if you want it displayed:
+
+![Cooklip Screenshot](docs/screenshot-main.png)
