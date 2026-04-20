@@ -122,7 +122,8 @@ function Write-ReleaseReadme {
     )
 
     $content = @($Title, "") + $HeaderLines + @("") + $Notes
-    Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+    $utf8Bom = [System.Text.UTF8Encoding]::new($true)
+    [System.IO.File]::WriteAllLines($Path, $content, $utf8Bom)
 }
 
 function Build-App {
@@ -162,6 +163,7 @@ function Create-ReleaseVariant {
         [string]$SourceExeName,
         [string]$ReleaseExeName,
         [bool]$IncludeYtDlp,
+        [bool]$IncludeDeno,
         [bool]$IncludeFfmpeg,
         [string]$ReadmeTitle,
         [string[]]$ReadmeHeaderLines,
@@ -190,6 +192,9 @@ function Create-ReleaseVariant {
 
     if ($IncludeYtDlp) {
         Copy-IfFound -Source $script:ytDlpPath -DestinationDir $binDir | Out-Null
+    }
+    if ($IncludeDeno) {
+        Copy-IfFound -Source $script:denoPath -DestinationDir $binDir | Out-Null
     }
     if ($IncludeFfmpeg) {
         Copy-IfFound -Source $script:ffmpegPath -DestinationDir $binDir | Out-Null
@@ -287,6 +292,14 @@ $script:ffmpegPath = Find-CommandPath -Names @("ffmpeg", "ffmpeg.exe") -Candidat
     "$env:UserProfile\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe"
 )
 
+$script:denoPath = Find-CommandPath -Names @("deno", "deno.exe") -CandidatePaths @(
+    (Join-Path $ProjectRoot "bin\deno.exe"),
+    (Join-Path $ProjectRoot "deno.exe"),
+    "$env:USERPROFILE\.deno\bin\deno.exe",
+    "$env:LocalAppData\Microsoft\WinGet\Links\deno.exe",
+    "$env:UserProfile\AppData\Local\Microsoft\WinGet\Links\deno.exe"
+)
+
 $script:ffprobePath = Find-CommandPath -Names @("ffprobe", "ffprobe.exe") -CandidatePaths @(
     (Join-Path $ProjectRoot "bin\ffprobe.exe"),
     (Join-Path $ProjectRoot "ffprobe.exe"),
@@ -299,29 +312,30 @@ $RuFullDir = Join-Path $ReleaseRoot "Cooklip-RU-full"
 $EnLiteDir = Join-Path $ReleaseRoot "Cooklip-lite"
 $EnFullDir = Join-Path $ReleaseRoot "Cooklip-full"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuLiteDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader RU - Lite" -ReadmeHeaderLines @(
-    "Quick start:",
-    "1. Run Cooklip RU Lite.exe",
-    "2. If needed, click 'Запустить Edge для куков'",
+Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuLiteDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeDeno $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader RU - Lite" -ReadmeHeaderLines @(
+    "Быстрый старт:",
+    "1. Запустите Cooklip RU Lite.exe",
+    "2. При необходимости нажмите 'Запустить Edge для куков'",
     "3. Авторизуйтесь и нажмите 'Обновить куки из Edge'",
     "4. Вставьте ссылку и нажмите 'Скачать'"
 ) -ReadmeNotes @(
-    "- yt-dlp.exe is included.",
-    "- ffmpeg is not included in lite. Use the full release if conversion or merging is needed."
+    "- В комплект входит yt-dlp.exe.",
+    "- В комплект входит deno.exe для YouTube challenge solving.",
+    "- ffmpeg не входит в lite. Для конвертации и склейки используйте full-версию."
 ) -SourceExeName "Cooklip_RU.exe" -ReleaseExeName "Cooklip RU Lite.exe"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuFullDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader RU - Full" -ReadmeHeaderLines @(
-    "Quick start:",
-    "1. Run Cooklip RU Full.exe",
-    "2. If needed, click 'Запустить Edge для куков'",
+Create-ReleaseVariant -BuiltAppDir $BuiltRuDir -VariantDir $RuFullDir -SettingsFileName "cooklip_settings.json" -IncludeYtDlp $true -IncludeDeno $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader RU - Full" -ReadmeHeaderLines @(
+    "Быстрый старт:",
+    "1. Запустите Cooklip RU Full.exe",
+    "2. При необходимости нажмите 'Запустить Edge для куков'",
     "3. Авторизуйтесь и нажмите 'Обновить куки из Edge'",
     "4. Вставьте ссылку и нажмите 'Скачать'"
 ) -ReadmeNotes @(
-    "- yt-dlp.exe is included.",
-    "- ffmpeg.exe and ffprobe.exe are included."
+    "- В комплект входят yt-dlp.exe и deno.exe.",
+    "- В комплект входят ffmpeg.exe и ffprobe.exe."
 ) -SourceExeName "Cooklip_RU.exe" -ReleaseExeName "Cooklip RU Full.exe"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnLiteDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader - Lite" -ReadmeHeaderLines @(
+Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnLiteDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeDeno $true -IncludeFfmpeg $false -ReadmeTitle "Cooklip Downloader - Lite" -ReadmeHeaderLines @(
     "Quick start:",
     "1. Run Cooklip Lite.exe",
     "2. If needed, click 'Launch Edge for cookies'",
@@ -329,10 +343,11 @@ Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnLiteDir -SettingsF
     "4. Paste a link and download"
 ) -ReadmeNotes @(
     "- yt-dlp.exe is included.",
+    "- deno.exe is included for YouTube challenge solving.",
     "- ffmpeg is not included in lite. Use the full release if conversion or merging is needed."
 ) -SourceExeName "Cooklip.exe" -ReleaseExeName "Cooklip Lite.exe"
 
-Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnFullDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader - Full" -ReadmeHeaderLines @(
+Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnFullDir -SettingsFileName "cooklip_settings_en.json" -IncludeYtDlp $true -IncludeDeno $true -IncludeFfmpeg $true -ReadmeTitle "Cooklip Downloader - Full" -ReadmeHeaderLines @(
     "Quick start:",
     "1. Run Cooklip Full.exe",
     "2. If needed, click 'Launch Edge for cookies'",
@@ -340,6 +355,7 @@ Create-ReleaseVariant -BuiltAppDir $BuiltEnDir -VariantDir $EnFullDir -SettingsF
     "4. Paste a link and download"
 ) -ReadmeNotes @(
     "- yt-dlp.exe is included.",
+    "- deno.exe is included for YouTube challenge solving.",
     "- ffmpeg.exe and ffprobe.exe are included."
 ) -SourceExeName "Cooklip.exe" -ReleaseExeName "Cooklip Full.exe"
 

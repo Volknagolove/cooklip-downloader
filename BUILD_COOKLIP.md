@@ -30,8 +30,10 @@ powershell -ExecutionPolicy Bypass -File .\build_cooklip.ps1
   - `release/Cooklip-RU-full`
 - кладёт в `lite`:
   - `yt-dlp.exe`
+  - `deno.exe`
 - кладёт в `full`:
   - `yt-dlp.exe`
+  - `deno.exe`
   - `ffmpeg.exe`
   - `ffprobe.exe`
 - создаёт zip-архивы всех четырёх релизов

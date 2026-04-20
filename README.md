@@ -34,12 +34,14 @@ Cooklip Downloader is a desktop GUI for `yt-dlp` with Microsoft Edge cookie supp
 
 - includes the app executable
 - includes `yt-dlp.exe`
+- includes `deno.exe`
 - does not include `ffmpeg`
 
 ### Full
 
 - includes the app executable
 - includes `yt-dlp.exe`
+- includes `deno.exe`
 - includes `ffmpeg.exe`
 - includes `ffprobe.exe`
 
@@ -51,6 +53,11 @@ Cooklip stores user files next to the app in a `data` folder:
 - cookies: `data/cookies.txt`
 
 This keeps the app portable and makes cookies easy to find and replace.
+
+
+## YouTube Notes
+
+Some YouTube videos may require `deno` for challenge solving when `yt-dlp` needs an external JavaScript runtime. The packaged Cooklip Lite and Full releases include `deno.exe` in `bin/`.
 
 ## Build
 
