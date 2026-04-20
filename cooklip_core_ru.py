@@ -20,7 +20,8 @@ APP_ICON_FILE = "cooklip.ico"
 SETTINGS_FILE = "cooklip_settings.json"
 LEGACY_SETTINGS_FILE = "yt_cookie_downloader_settings.json"
 DEFAULT_COOKIES_FILE = "cookies.txt"
-EDGE_LIST_URL = "http://127.0.0.1:9222/json/list"
+EDGE_DEBUG_HOST = "127.0.0.1"
+DEFAULT_EDGE_DEBUG_PORT = 9222
 EDGE_URLS = [
     "https://www.youtube.com/",
     "https://accounts.google.com/",

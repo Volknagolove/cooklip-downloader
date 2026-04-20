@@ -20,7 +20,8 @@ APP_ICON_FILE = "cooklip.ico"
 SETTINGS_FILE = "cooklip_settings_en.json"
 LEGACY_SETTINGS_FILE = "yt_cookie_downloader_settings.json"
 DEFAULT_COOKIES_FILE = "cookies.txt"
-EDGE_LIST_URL = "http://127.0.0.1:9222/json/list"
+EDGE_DEBUG_HOST = "127.0.0.1"
+DEFAULT_EDGE_DEBUG_PORT = 9222
 EDGE_URLS = [
     "https://www.youtube.com/",
     "https://accounts.google.com/",
@@ -95,10 +96,31 @@ STARTF_USESHOWWINDOW = getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
 SW_HIDE = 0
 
 
+def normalize_edge_debug_port(value) -> int:
+    try:
+        port = int(str(value).strip())
+    except (TypeError, ValueError):
+        return DEFAULT_EDGE_DEBUG_PORT
+    if 1 <= port <= 65535:
+        return port
+    return DEFAULT_EDGE_DEBUG_PORT
+
+
+def edge_list_url(port: int | None = None) -> str:
+    port = normalize_edge_debug_port(port)
+    return f"http://{EDGE_DEBUG_HOST}:{port}/json/list"
+
+
+def edge_origin(port: int | None = None) -> str:
+    port = normalize_edge_debug_port(port)
+    return f"http://{EDGE_DEBUG_HOST}:{port}"
+
+
 def default_settings():
     return {
         "download_dir": str(default_download_dir()),
         "cookies_path": str(APP_STATE_DIR / DEFAULT_COOKIES_FILE),
+        "edge_debug_port": DEFAULT_EDGE_DEBUG_PORT,
         "format_type": "mp4",
         "quality": "best",
         "url": "",
@@ -124,6 +146,7 @@ def load_settings():
                 str(LEGACY_APP_STATE_DIR / DEFAULT_COOKIES_FILE),
             }:
                 base["cookies_path"] = str(APP_STATE_DIR / DEFAULT_COOKIES_FILE)
+            base["edge_debug_port"] = normalize_edge_debug_port(base.get("edge_debug_port"))
             return base
         except Exception:
             pass
@@ -328,8 +351,8 @@ def cookies_contain_authorization(cookies: list[dict]) -> bool:
     return False
 
 
-def get_page_ws_debugger_url():
-    with urlopen(EDGE_LIST_URL) as r:
+def get_page_ws_debugger_url(port: int | None = None):
+    with urlopen(edge_list_url(port)) as r:
         targets = json.loads(r.read().decode("utf-8"))
 
     for target in targets:
@@ -359,9 +382,10 @@ def cdp_call(ws, method, params=None, msg_id=1):
             return msg.get("result", {})
 
 
-def export_cookies_from_edge(output_path: Path):
-    ws_url = get_page_ws_debugger_url()
-    ws = websocket.create_connection(ws_url, origin="http://127.0.0.1:9222")
+def export_cookies_from_edge(output_path: Path, port: int | None = None):
+    port = normalize_edge_debug_port(port)
+    ws_url = get_page_ws_debugger_url(port)
+    ws = websocket.create_connection(ws_url, origin=edge_origin(port))
     try:
         cdp_call(ws, "Network.enable", {}, 1)
         result = cdp_call(ws, "Network.getCookies", {"urls": EDGE_URLS}, 2)
@@ -577,11 +601,12 @@ def describe_missing_dependencies(format_type: str) -> list[str]:
     return missing
 
 
-def explain_cookie_refresh_error(error: Exception) -> str:
+def explain_cookie_refresh_error(error: Exception, port: int | None = None) -> str:
+    port = normalize_edge_debug_port(port)
     text = str(error).lower()
-    if "connection refused" in text or "127.0.0.1:9222" in text:
+    if "connection refused" in text or f"{EDGE_DEBUG_HOST}:{port}" in text:
         return (
-            "Could not connect to Edge DevTools on port 9222. "
+            f"Could not connect to Edge DevTools on port {port}. "
             "Launch Edge for cookies using the app button and open a YouTube tab."
         )
     if "page tab" in text or "page-вкладка" in text or "websocketdebuggerurl" in text:

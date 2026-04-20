@@ -47,7 +47,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 import cooklip_resources_rc
-import cooklip_core as core
+import cooklip_core_ru as core
 
 
 STATUS_META = {
@@ -251,6 +251,7 @@ class FluentDownloader(QWidget):
         self.url_edit = LineEdit(self)
         self.download_dir_edit = LineEdit(self)
         self.cookies_path_edit = LineEdit(self)
+        self.edge_port_edit = LineEdit(self)
         self.format_combo = ComboBox(self)
         self.quality_combo = ComboBox(self)
 
@@ -258,10 +259,14 @@ class FluentDownloader(QWidget):
             self.url_edit,
             self.download_dir_edit,
             self.cookies_path_edit,
+            self.edge_port_edit,
             self.format_combo,
             self.quality_combo,
         ):
             widget.setFixedHeight(36)
+
+        self.edge_port_edit.setPlaceholderText(str(core.DEFAULT_EDGE_DEBUG_PORT))
+        self.edge_port_edit.setFixedWidth(92)
 
         self.download_button = PrimaryPushButton("Скачать", self, FIF.DOWN)
         self.stop_button = PushButton("Стоп", self, FIF.CLOSE)
@@ -361,6 +366,8 @@ class FluentDownloader(QWidget):
         cookies_row.setSpacing(10)
         cookies_row.addWidget(self.refresh_cookies_button)
         cookies_row.addWidget(self.launch_edge_button)
+        cookies_row.addWidget(BodyLabel("Порт", self))
+        cookies_row.addWidget(self.edge_port_edit)
         cookies_row.addStretch(1)
         form_layout.addLayout(cookies_row, 3, 1, 1, 4)
 
@@ -469,6 +476,7 @@ class FluentDownloader(QWidget):
         self.url_edit.setText(self.settings.get("url", ""))
         self.download_dir_edit.setText(self.settings.get("download_dir", str(core.default_download_dir())))
         self.cookies_path_edit.setText(self.settings.get("cookies_path", str(core.APP_STATE_DIR / core.DEFAULT_COOKIES_FILE)))
+        self.edge_port_edit.setText(str(core.normalize_edge_debug_port(self.settings.get("edge_debug_port"))))
         self.format_combo.addItems(core.VIDEO_FORMATS + core.AUDIO_FORMATS)
         self.format_combo.setCurrentText(self.settings.get("format_type", "mp4"))
         self.update_quality_state()
@@ -488,6 +496,7 @@ class FluentDownloader(QWidget):
             "url": self.url_edit.text().strip(),
             "download_dir": self.download_dir_edit.text().strip(),
             "cookies_path": self.cookies_path_edit.text().strip(),
+            "edge_debug_port": core.normalize_edge_debug_port(self.edge_port_edit.text().strip()),
             "format_type": self.format_combo.currentText().strip(),
             "quality": self.quality_combo.currentText().strip(),
             "downloads_history": self.downloads_history,
@@ -702,10 +711,12 @@ class FluentDownloader(QWidget):
         if not edge_path:
             QMessageBox.critical(self, core.APP_NAME, "Не найден msedge.exe.")
             return
+        port = core.normalize_edge_debug_port(self.edge_port_edit.text().strip())
+        self.edge_port_edit.setText(str(port))
         profile_dir = str(Path.home() / "AppData/Local/Temp/edge-yt-cookies")
         cmd = [
             edge_path,
-            "--remote-debugging-port=9222",
+            f"--remote-debugging-port={port}",
             "--remote-allow-origins=*",
             f"--user-data-dir={profile_dir}",
             "--no-first-run",
@@ -717,7 +728,7 @@ class FluentDownloader(QWidget):
             stderr=subprocess.DEVNULL,
             **core.hidden_subprocess_kwargs(),
         )
-        self.write_log("Edge запущен для получения куков.")
+        self.write_log(f"Edge запущен для получения куков на порту {port}.")
 
     def refresh_cookies(self):
         if self.cookies_thread and self.cookies_thread.is_alive():
@@ -725,11 +736,13 @@ class FluentDownloader(QWidget):
             return
         self.persist_settings(silent=True)
         output_path = Path(self.cookies_path_edit.text().strip())
+        port = core.normalize_edge_debug_port(self.edge_port_edit.text().strip())
+        self.edge_port_edit.setText(str(port))
 
         def runner():
             try:
                 self.bus.log.emit(f"Обновление куков в {output_path}")
-                result = core.export_cookies_from_edge(output_path)
+                result = core.export_cookies_from_edge(output_path, port)
                 count = result["written"]
                 if result["authorized"]:
                     self.bus.info.emit(f"Куки обновлены. Авторизация обнаружена. Записано строк: {count}")
@@ -739,7 +752,7 @@ class FluentDownloader(QWidget):
                         f"Проверьте, что в Edge выполнен вход в аккаунт. Записано строк: {count}"
                     )
             except Exception as exc:
-                self.bus.error.emit(core.explain_cookie_refresh_error(exc))
+                self.bus.error.emit(core.explain_cookie_refresh_error(exc, port))
 
         self.cookies_thread = threading.Thread(target=runner, daemon=True)
         self.cookies_thread.start()
