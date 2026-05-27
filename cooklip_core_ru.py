@@ -20,8 +20,7 @@ APP_ICON_FILE = "cooklip.ico"
 SETTINGS_FILE = "cooklip_settings.json"
 LEGACY_SETTINGS_FILE = "yt_cookie_downloader_settings.json"
 DEFAULT_COOKIES_FILE = "cookies.txt"
-EDGE_DEBUG_HOST = "127.0.0.1"
-DEFAULT_EDGE_DEBUG_PORT = 9222
+EDGE_LIST_URL = "http://127.0.0.1:9222/json/list"
 EDGE_URLS = [
     "https://www.youtube.com/",
     "https://accounts.google.com/",
@@ -523,6 +522,67 @@ def dependencies_status() -> dict[str, bool]:
         "yt-dlp": bool(find_binary("yt-dlp")),
         "ffmpeg": bool(find_binary("ffmpeg")),
     }
+
+
+def resolve_ffmpeg_executable() -> str | None:
+    return find_binary("ffmpeg")
+
+
+def compatible_mp4_output_path(input_path: str | Path) -> Path:
+    source = Path(input_path)
+    base = source.with_name(f"{source.stem}_compatible.mp4")
+    if not base.exists():
+        return base
+    index = 2
+    while True:
+        candidate = source.with_name(f"{source.stem}_compatible_{index}.mp4")
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def transcode_to_compatible_mp4(input_path: str | Path) -> Path:
+    source = Path(input_path)
+    if not source.exists():
+        raise FileNotFoundError(f"Файл не найден: {source}")
+    if source.suffix.lower() != ".mp4":
+        raise ValueError("Совместимое перекодирование доступно только для MP4.")
+
+    ffmpeg = resolve_ffmpeg_executable()
+    if not ffmpeg:
+        raise FileNotFoundError("ffmpeg не найден.")
+
+    output_path = compatible_mp4_output_path(source)
+    result = subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(source),
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            str(output_path),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        shell=False,
+        check=False,
+        **hidden_subprocess_kwargs(),
+    )
+    if result.returncode != 0:
+        if output_path.exists():
+            try:
+                output_path.unlink()
+            except OSError:
+                pass
+        details = "\n".join((result.stdout or "").splitlines()[-12:])
+        raise RuntimeError(f"Ошибка перекодирования ffmpeg.\n{details}")
+    return output_path
 
 
 def build_yt_dlp_command(

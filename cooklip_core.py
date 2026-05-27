@@ -254,6 +254,63 @@ def resolve_ffmpeg_executable() -> str | None:
     )
 
 
+def compatible_mp4_output_path(input_path: str | Path) -> Path:
+    source = Path(input_path)
+    base = source.with_name(f"{source.stem}_compatible.mp4")
+    if not base.exists():
+        return base
+    index = 2
+    while True:
+        candidate = source.with_name(f"{source.stem}_compatible_{index}.mp4")
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def transcode_to_compatible_mp4(input_path: str | Path) -> Path:
+    source = Path(input_path)
+    if not source.exists():
+        raise FileNotFoundError(f"File not found: {source}")
+    if source.suffix.lower() != ".mp4":
+        raise ValueError("Compatible conversion is available only for MP4 files.")
+
+    ffmpeg = resolve_ffmpeg_executable()
+    if not ffmpeg:
+        raise FileNotFoundError("ffmpeg was not found.")
+
+    output_path = compatible_mp4_output_path(source)
+    result = subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(source),
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            str(output_path),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        shell=False,
+        check=False,
+        **hidden_subprocess_kwargs(),
+    )
+    if result.returncode != 0:
+        if output_path.exists():
+            try:
+                output_path.unlink()
+            except OSError:
+                pass
+        details = "\n".join((result.stdout or "").splitlines()[-12:])
+        raise RuntimeError(f"ffmpeg conversion failed.\n{details}")
+    return output_path
+
+
 def resolve_deno_executable() -> str | None:
     return resolve_executable(
         "deno",

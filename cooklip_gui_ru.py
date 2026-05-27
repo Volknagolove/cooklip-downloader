@@ -13,6 +13,7 @@ try:
     from PySide6.QtWidgets import (
         QAbstractItemView,
         QApplication,
+        QCheckBox,
         QFileDialog,
         QFrame,
         QGridLayout,
@@ -47,7 +48,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 import cooklip_resources_rc
-import cooklip_core_ru as core
+import cooklip_core as core
 
 
 STATUS_META = {
@@ -78,6 +79,7 @@ class SignalBus(QObject):
 class HistoryItemWidget(QFrame):
     openRequested = Signal(dict)
     linkRequested = Signal(dict)
+    convertRequested = Signal(dict)
     deleteRequested = Signal(dict)
 
     def __init__(self, item: dict[str, str], parent=None):
@@ -111,14 +113,17 @@ class HistoryItemWidget(QFrame):
 
         self.open_btn = self._make_tool_button(FIF.PLAY, "Открыть файл", "#16A34A", "#DCFCE7")
         self.link_btn = self._make_tool_button(FIF.LINK, "Открыть исходную ссылку", "#2563EB", "#DBEAFE")
+        self.convert_btn = self._make_tool_button(FIF.DOWN, "Сделать MP4 совместимым", "#475569", "#E2E8F0")
         self.delete_btn = self._make_tool_button(FIF.DELETE, "Удалить файл", "#DC2626", "#FEE2E2")
 
         self.open_btn.clicked.connect(lambda: self.openRequested.emit(self.item))
         self.link_btn.clicked.connect(lambda: self.linkRequested.emit(self.item))
+        self.convert_btn.clicked.connect(lambda: self.convertRequested.emit(self.item))
         self.delete_btn.clicked.connect(lambda: self.deleteRequested.emit(self.item))
 
         layout.addWidget(self.open_btn)
         layout.addWidget(self.link_btn)
+        layout.addWidget(self.convert_btn)
         layout.addWidget(self.delete_btn)
 
     def _make_tool_button(self, icon, tooltip: str, fg: str, bg: str):
@@ -129,6 +134,7 @@ class HistoryItemWidget(QFrame):
         hover_bg = {
             "#16A34A": "#CFEFD8",
             "#2563EB": "#D7E6FD",
+            "#475569": "#D8E0EA",
             "#DC2626": "#F9D6D6",
         }.get(fg, bg)
         button.setStyleSheet(
@@ -254,6 +260,7 @@ class FluentDownloader(QWidget):
         self.edge_port_edit = LineEdit(self)
         self.format_combo = ComboBox(self)
         self.quality_combo = ComboBox(self)
+        self.compatible_mp4_check = QCheckBox("Совместимый MP4 (H.264/AAC)", self)
 
         for widget in (
             self.url_edit,
@@ -267,6 +274,7 @@ class FluentDownloader(QWidget):
 
         self.edge_port_edit.setPlaceholderText(str(core.DEFAULT_EDGE_DEBUG_PORT))
         self.edge_port_edit.setFixedWidth(92)
+        self.compatible_mp4_check.setToolTip("После скачивания перекодировать MP4 в H.264 видео и AAC аудио.")
 
         self.download_button = PrimaryPushButton("Скачать", self, FIF.DOWN)
         self.stop_button = PushButton("Стоп", self, FIF.CLOSE)
@@ -380,6 +388,8 @@ class FluentDownloader(QWidget):
         format_row.addWidget(BodyLabel("Качество", self))
         self.quality_combo.setMaximumWidth(164)
         format_row.addWidget(self.quality_combo)
+        format_row.addSpacing(12)
+        format_row.addWidget(self.compatible_mp4_check)
         format_row.addStretch(1)
         form_layout.addLayout(format_row, 4, 0, 1, 5)
 
@@ -479,7 +489,9 @@ class FluentDownloader(QWidget):
         self.edge_port_edit.setText(str(core.normalize_edge_debug_port(self.settings.get("edge_debug_port"))))
         self.format_combo.addItems(core.VIDEO_FORMATS + core.AUDIO_FORMATS)
         self.format_combo.setCurrentText(self.settings.get("format_type", "mp4"))
+        self.compatible_mp4_check.setChecked(bool(self.settings.get("compatible_mp4", False)))
         self.update_quality_state()
+        self.update_compatible_mp4_state()
         quality = self.settings.get("quality", "best")
         if quality in [self.quality_combo.itemText(i) for i in range(self.quality_combo.count())]:
             self.quality_combo.setCurrentText(quality)
@@ -499,6 +511,7 @@ class FluentDownloader(QWidget):
             "edge_debug_port": core.normalize_edge_debug_port(self.edge_port_edit.text().strip()),
             "format_type": self.format_combo.currentText().strip(),
             "quality": self.quality_combo.currentText().strip(),
+            "compatible_mp4": self.compatible_mp4_check.isChecked(),
             "downloads_history": self.downloads_history,
         }
 
@@ -552,6 +565,7 @@ class FluentDownloader(QWidget):
             widget = HistoryItemWidget(item, self.history_list)
             widget.openRequested.connect(self.open_history_file)
             widget.linkRequested.connect(self.open_history_link)
+            widget.convertRequested.connect(self.convert_history_file)
             widget.deleteRequested.connect(self.delete_history_file)
             list_item.setSizeHint(widget.sizeHint())
             self.history_list.addItem(list_item)
@@ -662,11 +676,35 @@ class FluentDownloader(QWidget):
         self.refresh_history_view()
         self.persist_settings(silent=True)
 
+    def convert_history_file(self, item: dict[str, str]):
+        path = self.resolve_history_file_path(item["path"])
+        if not path or not path.exists():
+            QMessageBox.warning(self, core.APP_NAME, "Не удалось найти файл на диске.")
+            return
+        if path.suffix.lower() != ".mp4":
+            QMessageBox.warning(self, core.APP_NAME, "Совместимое перекодирование доступно только для MP4.")
+            return
+
+        def runner():
+            try:
+                self.bus.log.emit(f"Перекодирование в совместимый MP4: {path}")
+                output_path = core.transcode_to_compatible_mp4(path)
+                self.bus.downloadAdded.emit(str(output_path), item.get("url", ""))
+                self.bus.info.emit(f"Создан совместимый MP4: {output_path.name}")
+            except Exception as exc:
+                self.bus.error.emit(f"Не удалось создать совместимый MP4.\n\n{exc}")
+
+        threading.Thread(target=runner, daemon=True).start()
+
     def update_quality_state(self):
         self.quality_combo.blockSignals(True)
         self.quality_combo.clear()
         self.quality_combo.addItems(core.get_quality_values(self.format_combo.currentText() or "mp4"))
         self.quality_combo.blockSignals(False)
+
+    def update_compatible_mp4_state(self):
+        enabled = self.format_combo.currentText().strip().lower() == "mp4"
+        self.compatible_mp4_check.setEnabled(enabled)
 
     def _on_format_changed(self):
         previous = self.quality_combo.currentText()
@@ -675,6 +713,7 @@ class FluentDownloader(QWidget):
             idx = self.quality_combo.findText(previous)
             if idx >= 0:
                 self.quality_combo.setCurrentIndex(idx)
+        self.update_compatible_mp4_state()
         self.refresh_dependency_status()
 
     def refresh_dependency_status(self):
@@ -805,6 +844,19 @@ class FluentDownloader(QWidget):
             return None
         return None
 
+    def convert_downloaded_files_to_compatible_mp4(self, files: list[str]) -> list[str]:
+        converted: list[str] = []
+        for file_path in files:
+            path = Path(file_path)
+            if path.suffix.lower() != ".mp4":
+                converted.append(file_path)
+                continue
+            self.bus.log.emit(f"Перекодирование в совместимый MP4: {path}")
+            output_path = core.transcode_to_compatible_mp4(path)
+            self.bus.log.emit(f"Создан совместимый MP4: {output_path}")
+            converted.append(str(output_path))
+        return converted
+
     def start_download(self):
         if self.download_thread and self.download_thread.is_alive():
             QMessageBox.information(self, core.APP_NAME, "Загрузка уже выполняется.")
@@ -819,6 +871,9 @@ class FluentDownloader(QWidget):
             return
 
         self.persist_settings(silent=True)
+        format_type = self.format_combo.currentText().strip()
+        quality = self.quality_combo.currentText().strip()
+        compatible_mp4 = self.compatible_mp4_check.isChecked() and format_type.lower() == "mp4"
         self.stop_requested = False
         self.download_button.setEnabled(False)
         self.stop_button.setEnabled(True)
@@ -833,8 +888,8 @@ class FluentDownloader(QWidget):
                     url=source_url,
                     cookies_path=self.cookies_path_edit.text().strip(),
                     download_dir=self.download_dir_edit.text().strip(),
-                    format_type=self.format_combo.currentText().strip(),
-                    quality=self.quality_combo.currentText().strip(),
+                    format_type=format_type,
+                    quality=quality,
                     final_path_file=str(final_marker),
                     playlist_mode=playlist_mode,
                 )
@@ -874,15 +929,19 @@ class FluentDownloader(QWidget):
                 rc = self.download_process.wait()
                 final_files = core.read_final_path_markers(final_marker)
                 if rc == 0:
+                    if compatible_mp4:
+                        final_files = self.convert_downloaded_files_to_compatible_mp4(final_files)
                     for final_file in final_files:
                         self.bus.downloadAdded.emit(final_file, source_url)
                     self.bus.info.emit("Загрузка завершена.")
                 elif playlist_mode == "playlist" and core.is_partial_playlist_success(rc, output_lines):
+                    if compatible_mp4:
+                        final_files = self.convert_downloaded_files_to_compatible_mp4(final_files)
                     for final_file in final_files:
                         self.bus.downloadAdded.emit(final_file, source_url)
                     self.bus.info.emit(core.explain_partial_playlist_success(output_lines))
                 else:
-                    self.bus.error.emit(core.explain_download_failure(rc, output_lines, self.format_combo.currentText().strip()))
+                    self.bus.error.emit(core.explain_download_failure(rc, output_lines, format_type))
             except Exception as exc:
                 self.bus.error.emit(
                     "Не удалось запустить процесс загрузки. "

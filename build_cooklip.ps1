@@ -1,5 +1,6 @@
 param(
-    [switch]$NoZip
+    [switch]$NoZip,
+    [string]$ReleaseName = "release"
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,10 +11,11 @@ Set-Location $ProjectRoot
 $IconPath = Join-Path $ProjectRoot "cooklip.ico"
 $QrcPath = Join-Path $ProjectRoot "cooklip_resources.qrc"
 $RcPyPath = Join-Path $ProjectRoot "cooklip_resources_rc.py"
-$TempBuildRoot = Join-Path $ProjectRoot ".build_work"
-$TempDistRoot = Join-Path $ProjectRoot ".dist_work"
-$TempSpecRoot = Join-Path $ProjectRoot (".spec_work_" + [guid]::NewGuid().ToString("N"))
-$ReleaseRoot = Join-Path $ProjectRoot "release"
+$WorkId = [guid]::NewGuid().ToString("N")
+$TempBuildRoot = Join-Path $ProjectRoot (".build_work_" + $WorkId)
+$TempDistRoot = Join-Path $ProjectRoot (".dist_work_" + $WorkId)
+$TempSpecRoot = Join-Path $ProjectRoot (".spec_work_" + $WorkId)
+$ReleaseRoot = Join-Path $ProjectRoot $ReleaseName
 
 function Find-RccPath {
     $candidates = @(
@@ -152,7 +154,7 @@ function Build-App {
     }
 
     $args += $ScriptPath
-    & py @args
+    & py -3.10 @args
 }
 
 function Create-ReleaseVariant {
@@ -219,13 +221,13 @@ function Zip-Variant {
 
 $pyInstallerInstalled = $true
 try {
-    py -m PyInstaller --version | Out-Null
+    py -3.10 -m PyInstaller --version | Out-Null
 } catch {
     $pyInstallerInstalled = $false
 }
 
 if (-not $pyInstallerInstalled) {
-    throw "PyInstaller is not installed. Run: py -m pip install pyinstaller"
+    throw "PyInstaller is not installed. Run: py -3.10 -m pip install pyinstaller"
 }
 
 if (!(Test-Path -LiteralPath $IconPath)) {

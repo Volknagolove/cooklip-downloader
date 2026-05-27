@@ -8,6 +8,7 @@ Cooklip Downloader is a desktop GUI for `yt-dlp` with Microsoft Edge cookie supp
 - download playlists
 - refresh `cookies.txt` from Microsoft Edge
 - choose format and quality
+- create compatible MP4 files with H.264/AAC for better playback and editing support
 - keep a history of downloaded files
 - portable `data/` folder next to the app
 - English default GUI and separate Russian GUI versions
@@ -62,4 +63,5 @@ Some YouTube videos may require `deno` for challenge solving when `yt-dlp` needs
 ## Build
 
 See `BUILD_COOKLIP.md` for build instructions.
+
 
